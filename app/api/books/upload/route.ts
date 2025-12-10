@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     const parsed = await pdfParse(buffer, { pagerender: undefined });
     const pages = parsed.text
       .split(/\f/) // form feed between pages
-      .map((p) => p.trim());
+      .map((p: string) => p.trim());
 
     const { chapters, blurb } = buildChapters(pages);
 
