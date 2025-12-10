@@ -25,7 +25,7 @@ export function GiftStory({ storyId }: { storyId: string }) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      const { data, error } = await supabase
+      const resp = await supabase
         .from("gifted_links")
         .insert({
           story_id: storyId,
@@ -34,6 +34,8 @@ export function GiftStory({ storyId }: { storyId: string }) {
         })
         .select()
         .single();
+      const data = (resp as any).data ?? null;
+      const error = (resp as any).error ?? null;
 
       if (error) throw error;
 
