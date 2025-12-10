@@ -3,11 +3,11 @@ import { updateStory, getStories } from "@/lib/storage";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { type } = await request.json();
-    const id = params.id;
+    const { id } = await params;
 
     if (!type || (type !== "like" && type !== "coffee")) {
       return NextResponse.json(
