@@ -15,11 +15,12 @@ export function BedtimeStoryPicker() {
   useEffect(() => {
     async function loadData() {
       // Load all approved stories
-      const { data: allStories } = await supabase
+      const storiesResp = await supabase
         .from("stories")
         .select("*")
         .eq("is_approved", true)
         .order("created_at", { ascending: false });
+      const allStories = (storiesResp as any).data ?? null;
 
       if (allStories) {
         setStories(allStories);
@@ -27,11 +28,12 @@ export function BedtimeStoryPicker() {
 
       // Load today's bedtime story
       const today = new Date().toISOString().split("T")[0];
-      const { data: todayData } = await supabase
+      const todayResp = await supabase
         .from("bedtime_stories")
         .select("*, stories(*)")
         .eq("date", today)
         .single();
+      const todayData = (todayResp as any).data ?? null;
 
       if (todayData) {
         setTodayStory(todayData.stories);
