@@ -3,6 +3,15 @@ import { createBrowserClient } from "@supabase/ssr";
 type StubResult<T = any> = Promise<{ data: T; error: null }>;
 
 function makeStubTable() {
+  const makeChainableStub = (): any => ({
+    eq: () => makeChainableStub(),
+    gt: () => makeChainableStub(),
+    lt: () => makeChainableStub(),
+    order: () => makeChainableStub(),
+    limit: () => makeChainableStub(),
+    then: (resolve: any) => resolve({ data: null, error: null }),
+  });
+
   const stub = {
     select: () => stub,
     eq: () => stub,
@@ -14,8 +23,8 @@ function makeStubTable() {
     single: (): StubResult => Promise.resolve({ data: null, error: null }),
     upsert: (): StubResult => Promise.resolve({ data: null, error: null }),
     insert: (): StubResult => Promise.resolve({ data: null, error: null }),
-    update: (): StubResult => Promise.resolve({ data: null, error: null }),
-    delete: (): StubResult => Promise.resolve({ data: null, error: null }),
+    update: () => makeChainableStub(), // Returns chainable stub for .eq() chaining
+    delete: () => makeChainableStub(), // Returns chainable stub for .eq() chaining
   };
   return stub;
 }
