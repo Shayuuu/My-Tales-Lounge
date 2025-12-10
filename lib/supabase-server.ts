@@ -1,6 +1,3 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-
 type StubResult<T = any> = Promise<{ data: T; error: null }>;
 
 function makeStubTable() {
@@ -48,35 +45,5 @@ function makeStubClient() {
 }
 
 export async function createClient() {
-  const hasEnv =
-    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!hasEnv) {
-    return makeStubClient();
-  }
-
-  const cookieStore = await cookies();
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // Safe to ignore without middleware.
-          }
-        },
-      },
-    }
-  );
+  return makeStubClient();
 }

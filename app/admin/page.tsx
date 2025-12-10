@@ -6,6 +6,7 @@ import { InstantPublishForm } from "@/components/instant-publish-form";
 import { AdminStoryList } from "@/components/admin-story-list";
 import { FeaturedStoryManager } from "@/components/featured-story-manager";
 import { WeeklyEditionGenerator } from "@/components/weekly-edition-generator";
+import { AdminBooksList } from "@/components/admin-books-list";
 
 export default function AdminPage() {
   return (
@@ -41,6 +42,14 @@ export default function AdminPage() {
               All published stories. Click delete to remove.
             </p>
             <AdminStoryList />
+          </div>
+
+          <div className="bg-lounge-card border border-white/5 rounded-xl p-6 shadow-soft">
+            <h2 className="text-xl font-semibold mb-4">Auto PDF Books</h2>
+            <p className="text-sm text-neutral-400 mb-4">
+              Review auto-detected chapters, rename and reorder, then save.
+            </p>
+            <AdminBooksList />
           </div>
         </div>
       </LoungeShell>

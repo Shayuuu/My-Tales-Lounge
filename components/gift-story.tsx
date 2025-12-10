@@ -25,15 +25,19 @@ export function GiftStory({ storyId }: { storyId: string }) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      const resp = await supabase
+      const insertBuilder = supabase
         .from("gifted_links")
         .insert({
           story_id: storyId,
           created_by: user.id,
           expires_at: expiresAt.toISOString(),
-        })
-        .select()
-        .single();
+        });
+
+      // Supabase returns a query builder that supports select/single; the stub returns a promise.
+      const resp =
+        insertBuilder && typeof (insertBuilder as any).select === "function"
+          ? await (insertBuilder as any).select().single()
+          : await insertBuilder;
       const data = (resp as any).data ?? null;
       const error = (resp as any).error ?? null;
 

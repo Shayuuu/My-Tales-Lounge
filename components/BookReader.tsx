@@ -16,9 +16,24 @@ type Story = {
   author_name: string | null;
 };
 
+type ChapterMeta = {
+  id?: string;
+  title: string;
+  page_start: number;
+  page_end: number;
+};
+
 type Theme = "night" | "sepia" | "light";
 
-export function BookReader({ story }: { story: Story }) {
+export function BookReader({
+  story,
+  initialPage = 0,
+  chapters = [],
+}: {
+  story: Story;
+  initialPage?: number;
+  chapters?: ChapterMeta[];
+}) {
   const router = useRouter();
   const bookRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<string[]>([]);
@@ -32,6 +47,7 @@ export function BookReader({ story }: { story: Story }) {
   const [showMagicOverride, setShowMagicOverride] = useState(false);
   const [showJournalPrompt, setShowJournalPrompt] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(false);
   const [showGoodbye, setShowGoodbye] = useState(false);
   const { user } = useAuth();
   const supabase = createClient();
@@ -43,18 +59,6 @@ export function BookReader({ story }: { story: Story }) {
     true
   );
   const showMagic = showMagicOverride || (pages.length > 1 && showMagicAuto);
-
-  // Check bookmark on mount
-  useEffect(() => {
-    const savedBookmark = localStorage.getItem(`bookmark-${story.id}`);
-    const savedLast = localStorage.getItem(`last-page-${story.id}`);
-    if (savedBookmark) {
-      setBookmarked(true);
-      setCurrentPage(parseInt(savedBookmark));
-    } else if (savedLast) {
-      setCurrentPage(parseInt(savedLast));
-    }
-  }, [story.id]);
 
   // Load PDF and convert to images
   useEffect(() => {
@@ -113,6 +117,15 @@ export function BookReader({ story }: { story: Story }) {
         if (mounted) {
           setPages(pageImages);
           setLoading(false);
+          const savedBookmark = localStorage.getItem(`bookmark-${story.id}`);
+          const savedLast = localStorage.getItem(`last-page-${story.id}`);
+          const startFrom =
+            typeof initialPage === "number" ? initialPage : undefined;
+          const resolved =
+            startFrom ??
+            (savedBookmark ? parseInt(savedBookmark) : savedLast ? parseInt(savedLast) : 0);
+          if (savedBookmark) setBookmarked(true);
+          setCurrentPage(Math.min(resolved || 0, pageImages.length - 1));
         }
       } catch (error: any) {
         console.error("Error loading PDF:", error);
@@ -217,6 +230,19 @@ export function BookReader({ story }: { story: Story }) {
   useEffect(() => {
     if (pages.length > 0) {
       localStorage.setItem(`last-page-${story.id}`, currentPage.toString());
+    }
+
+    if (chapters.length > 0) {
+      const ch = chapters.find(
+        (c) => currentPage >= c.page_start && currentPage <= c.page_end
+      );
+      if (ch) {
+        localStorage.setItem(`last-chapter-${story.id}`, ch.id || `${ch.page_start}`);
+        localStorage.setItem(
+          `chapter-progress-${story.id}-${ch.id || ch.page_start}`,
+          (currentPage - ch.page_start).toString()
+        );
+      }
     }
   }, [currentPage, pages.length, story.id]);
 
@@ -395,6 +421,39 @@ export function BookReader({ story }: { story: Story }) {
             <Button variant="ghost" size="sm" onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </Button>
+
+            {chapters.length > 0 && (
+              <select
+                className="bg-black/40 border border-white/10 rounded-md text-sm px-2 py-1 text-neutral-200"
+                defaultValue=""
+                onChange={(e) => {
+                  const target = parseInt(e.target.value, 10);
+                  if (!isNaN(target)) {
+                    setCurrentPage(Math.min(target, pages.length - 1));
+                  }
+                }}
+              >
+                <option value="" disabled>
+                  Jump to chapter
+                </option>
+                {chapters.map((c) => (
+                  <option key={c.id || c.page_start} value={c.page_start}>
+                    {c.title} (p. {c.page_start + 1})
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {chapters.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTocOpen((p) => !p)}
+                className="ml-1"
+              >
+                TOC
+              </Button>
+            )}
           </div>
         )}
 
@@ -524,6 +583,64 @@ export function BookReader({ story }: { story: Story }) {
             </div>
           </div>
         </>
+      )}
+
+      {/* TOC sidebar */}
+      {chapters.length > 0 && (
+        <div
+          className={`absolute top-0 bottom-0 right-0 w-72 bg-black/70 backdrop-blur-sm border-l border-white/10 z-20 transform transition-transform duration-200 ${
+            tocOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="p-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-neutral-100">Table of Contents</h3>
+            <Button variant="ghost" size="sm" onClick={() => setTocOpen(false)}>
+              <X size={16} />
+            </Button>
+          </div>
+          <div className="p-3 space-y-2 overflow-y-auto h-[calc(100%-56px)]">
+            {chapters.map((c) => {
+              const active = currentPage >= c.page_start && currentPage <= c.page_end;
+              const progressKey = `chapter-progress-${story.id}-${c.id || c.page_start}`;
+              const saved = parseInt(localStorage.getItem(progressKey) || "0", 10);
+              const pct =
+                saved > 0 && c.page_end > c.page_start
+                  ? Math.min(100, Math.round((saved / (c.page_end - c.page_start + 1)) * 100))
+                  : active
+                  ? Math.round(
+                      ((currentPage - c.page_start) /
+                        Math.max(1, c.page_end - c.page_start + 1)) *
+                        100
+                    )
+                  : 0;
+              return (
+                <button
+                  key={c.id || c.page_start}
+                  onClick={() => {
+                    setCurrentPage(Math.min(c.page_start, pages.length - 1));
+                    setTocOpen(false);
+                  }}
+                  className={`w-full text-left p-2 rounded-lg border ${
+                    active ? "border-lounge-accent/60 bg-lounge-accent/10" : "border-white/5 bg-white/5"
+                  }`}
+                >
+                  <p className="text-sm text-neutral-100">
+                    {c.title}
+                  </p>
+                  <p className="text-[11px] text-neutral-400">
+                    Pages {c.page_start + 1}–{c.page_end + 1}
+                  </p>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full mt-1">
+                    <div
+                      className="h-1.5 rounded-full bg-lounge-accent"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Book Container */}

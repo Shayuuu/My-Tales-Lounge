@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getStories } from "@/lib/storage";
+import { readBooks, readChapters } from "@/lib/books-storage";
 
 type Params = {
   id: string;
@@ -24,7 +25,68 @@ export default async function ChapterPage({
   const data = getChapterData(id, chapter);
 
   if (!data || !data.chapter) {
-    notFound();
+    // Fallback to books/chapters storage for auto-split PDFs
+    const books = readBooks();
+    const chaptersAll = readChapters();
+    const book = books.find((b) => b.id === id);
+    const ch = chaptersAll.find((c) => c.id === chapter && c.book_id === id);
+    if (!book || !ch) {
+      notFound();
+    }
+    const chapters = chaptersAll
+      .filter((c) => c.book_id === id)
+      .sort((a, b) => a.chapter_number - b.chapter_number);
+    const idx = chapters.findIndex((c) => c.id === ch.id);
+    const prev = idx > 0 ? chapters[idx - 1] : null;
+    const next = idx + 1 < chapters.length ? chapters[idx + 1] : null;
+    return (
+      <main className="min-h-screen bg-black text-neutral-100">
+        <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
+          <div className="space-y-1">
+            <p className="text-sm text-neutral-400">{book.title}</p>
+            <h1 className="text-3xl font-bold">
+              {`Chapter ${ch.chapter_number}: ${ch.title}`}
+            </h1>
+            <p className="text-xs text-neutral-500">
+              Pages {ch.page_start + 1}–{ch.page_end + 1}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-lg border border-lounge-accent/30 bg-lounge-card/60 text-sm text-neutral-200 space-y-3">
+            <p>Open in flip reader at this chapter:</p>
+            <a
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-lounge-accent text-black font-semibold"
+              href={`/read/${book.id}?page=${ch.page_start}`}
+            >
+              Open Reader
+            </a>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-4 text-sm">
+            {prev ? (
+              <a
+                className="text-lounge-accent hover:underline"
+                href={`/read/${book.id}/${prev.id}`}
+              >
+                ← Previous
+              </a>
+            ) : (
+              <span className="text-neutral-500">Start of book</span>
+            )}
+            {next ? (
+              <a
+                className="text-lounge-accent hover:underline"
+                href={`/read/${book.id}/${next.id}`}
+              >
+                Next →
+              </a>
+            ) : (
+              <span className="text-neutral-500">You reached the latest chapter</span>
+            )}
+          </div>
+        </div>
+      </main>
+    );
   }
 
   const { story, chapter: ch, chapters } = data;

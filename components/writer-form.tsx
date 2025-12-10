@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export function WriterForm() {
   const [pending, setPending] = useState(false);
@@ -25,27 +26,34 @@ export function WriterForm() {
 
     const pdf = formData.get("pdf") as File | null;
     if (pdf && pdf.size > 0) {
-      if (pdf.size > 10 * 1024 * 1024) {
-        setStatus("PDF too large (max 10MB).");
+      if (pdf.size > 50 * 1024 * 1024) {
+        setStatus("PDF too large (max 50MB).");
         setPending(false);
         return;
       }
 
-      const filePath = `submissions/${Date.now()}-${pdf.name}`;
-      const { error, data } = await supabase.storage
-        .from("story-pdfs")
-        .upload(filePath, pdf, { upsert: true });
+      // Call our parsing API to auto-split chapters
+      try {
+        const uploadData = new FormData();
+        uploadData.set("pdf", pdf);
+        uploadData.set("title", (formData.get("message") as string) || "Untitled");
+        uploadData.set("author", (formData.get("name") as string) || "Anon");
 
-      if (error) {
-        setStatus("Upload failed. Please try again.");
+        const resp = await fetch("/api/books/upload", {
+          method: "POST",
+          body: uploadData,
+        });
+        const json = await resp.json();
+        if (!resp.ok) {
+          throw new Error(json.error || "Upload failed");
+        }
+        pdfUrl = json.book?.pdf_url || null;
+        toast.success("Chapters auto-created from PDF!");
+      } catch (err: any) {
+        toast.error(err?.message || "Upload failed");
         setPending(false);
         return;
       }
-
-      const { data: publicUrl } = supabase.storage
-        .from("story-pdfs")
-        .getPublicUrl(data.path);
-      pdfUrl = publicUrl.publicUrl;
     }
 
     const storyText = formData.get("story_text") as string;
@@ -114,7 +122,7 @@ export function WriterForm() {
           />
         </div>
         <div>
-          <Label htmlFor="pdf">Or upload PDF (max 10MB)</Label>
+          <Label htmlFor="pdf">Or upload PDF (max 50MB) — auto-split into chapters</Label>
           <Input
             id="pdf"
             name="pdf"

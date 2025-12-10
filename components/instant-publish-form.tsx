@@ -29,10 +29,16 @@ export function InstantPublishForm() {
         body: formData,
       });
 
-      const data = await response.json();
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
 
       if (!response.ok) {
-        setStatus(data.error || "Could not publish. Please try again.");
+        const message = data?.error || `Could not publish. Status ${response.status}`;
+        setStatus(message);
         console.error("Publish error:", data);
       } else {
         setStatus("Published! Redirecting...");
@@ -46,8 +52,9 @@ export function InstantPublishForm() {
           router.refresh();
         }, 1000);
       }
-    } catch (error) {
-      setStatus("Could not publish. Please try again.");
+    } catch (error: any) {
+      setStatus(error?.message || "Could not publish. Please try again.");
+      console.error("Publish error:", error);
     }
 
     setPending(false);
