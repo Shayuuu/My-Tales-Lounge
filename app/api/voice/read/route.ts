@@ -4,9 +4,8 @@ import { createClient } from "@/lib/supabase-server";
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const userResp = await supabase.auth.getUser();
+    const user = (userResp as any)?.data?.user ?? null;
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,11 +14,12 @@ export async function POST(request: NextRequest) {
     const { storyId, text, position } = await request.json();
 
     // Check if audio already exists
-    const { data: existing } = await supabase
+    const existingResp = await supabase
       .from("voice_audio_cache")
       .select("audio_url")
       .eq("story_id", storyId)
       .single();
+    const existing = (existingResp as any).data ?? null;
 
     if (existing?.audio_url) {
       return NextResponse.json({ audioUrl: existing.audio_url });
@@ -63,18 +63,19 @@ export async function POST(request: NextRequest) {
     
     // Upload to Supabase Storage
     const fileName = `${storyId}-${Date.now()}.mp3`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const uploadResp = await supabase.storage
       .from("voice-audio")
       .upload(fileName, audioBuffer, {
         contentType: "audio/mpeg",
         upsert: false,
       });
+    const uploadError = (uploadResp as any).error ?? null;
 
     if (uploadError) throw uploadError;
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("voice-audio").getPublicUrl(fileName);
+    const publicUrl =
+      (supabase.storage.from("voice-audio").getPublicUrl(fileName) as any)?.data
+        ?.publicUrl ?? "";
 
     // Cache the URL
     await supabase.from("voice_audio_cache").insert({

@@ -31,11 +31,12 @@ export function BedtimeStoryBanner() {
     async function loadBedtimeStory() {
       if (!user) return; // Type guard for TS
 
-      const { data: profile } = await supabase
+      const profileResp = await supabase
         .from("profiles")
         .select("bedtime_hour")
         .eq("id", user.id)
         .single();
+      const profile = (profileResp as any).data ?? null;
 
       const bedtimeHour = profile?.bedtime_hour || 22;
       const now = new Date();

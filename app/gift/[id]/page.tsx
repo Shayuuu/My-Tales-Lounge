@@ -12,11 +12,12 @@ export default async function GiftPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: gift } = await supabase
+  const giftResp = await supabase
     .from("gifted_links")
     .select("*, stories(*)")
     .eq("id", id)
     .single();
+  const gift = (giftResp as any).data ?? null;
 
   if (!gift || new Date(gift.expires_at) < new Date()) {
     notFound();

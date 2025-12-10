@@ -31,19 +31,21 @@ export function MidnightDrop() {
     };
 
     async function loadMidnightDrop() {
+      if (!user) return; // Type guard
       // Check if user already viewed today's drop
       const today = new Date().toISOString().split("T")[0];
-      const { data: viewed } = await supabase
+      const viewedResp = await supabase
         .from("midnight_views")
         .select("*")
         .eq("user_id", user.id)
         .eq("date", today)
         .single();
+      const viewed = (viewedResp as any).data ?? null;
 
       if (viewed) return; // Already viewed
 
       // Get a midnight drop story
-      const { data } = await supabase
+      const storyResp = await supabase
         .from("stories")
         .select("*")
         .eq("is_approved", true)
@@ -51,6 +53,7 @@ export function MidnightDrop() {
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
+      const data = (storyResp as any).data ?? null;
 
       if (data) {
         setStory(data);
