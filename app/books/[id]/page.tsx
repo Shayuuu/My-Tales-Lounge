@@ -6,8 +6,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BookOpen } from "lucide-react";
 
-export default function BookPage({ params }: { params: { id: string } }) {
-  const book = readBooks().find((b) => b.id === params.id);
+type Props = { params: Promise<{ id: string }> };
+
+export default async function BookPage({ params }: Props) {
+  const { id } = await params;
+  const book = readBooks().find((b) => b.id === id);
   if (!book) notFound();
   const chapters = readChapters()
     .filter((c) => c.book_id === book.id)
