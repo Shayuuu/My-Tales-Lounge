@@ -83,10 +83,10 @@ export function ChapterList({
                 </span>
               ) : (
                 <Button
-                  size="xs"
+                  size="sm"
                   variant="outline"
                   onClick={() => onRead && onRead(ch)}
-                  className="text-xs"
+                  className="text-xs px-2 py-1"
                 >
                   Read
                 </Button>
