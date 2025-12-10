@@ -15,6 +15,8 @@ export function ContinueReadingList() {
     if (!user) return;
 
     async function loadProgress() {
+      if (!user) return; // Type guard for TS
+
       const resp = await supabase
         .from("reading_progress")
         .select("*, stories(*)")
