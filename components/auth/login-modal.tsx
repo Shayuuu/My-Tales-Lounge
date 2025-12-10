@@ -25,25 +25,15 @@ export function LoginModal({
     setLoading(true);
 
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-        if (error) throw error;
-        toast.success("Check your email for the magic link! ✨");
-      } else {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-        if (error) throw error;
-        toast.success("Check your email for the magic link! ✨");
-      }
+      // Use signInWithOtp for both login and signup (magic link)
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+      toast.success("Check your email for the magic link! ✨");
       onClose();
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
