@@ -29,6 +29,8 @@ export function BedtimeStoryBanner() {
     };
 
     async function loadBedtimeStory() {
+      if (!user) return; // Type guard for TS
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("bedtime_hour")
