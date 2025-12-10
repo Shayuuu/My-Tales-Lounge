@@ -15,13 +15,14 @@ export function ContinueReadingList() {
     if (!user) return;
 
     async function loadProgress() {
-      const { data } = await supabase
+      const resp = await supabase
         .from("reading_progress")
         .select("*, stories(*)")
         .eq("user_id", user.id)
         .gt("progress_percent", 5)
         .lt("progress_percent", 95)
         .order("updated_at", { ascending: false });
+      const data = (resp as any).data ?? null;
 
       if (data) {
         setStories(data.map((rp: any) => ({
