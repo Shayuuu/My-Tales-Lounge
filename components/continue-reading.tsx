@@ -15,7 +15,7 @@ export function ContinueReading({ userId }: { userId: string }) {
     async function loadProgress() {
       // Try Supabase first, fallback to localStorage
       try {
-        const { data } = await supabase
+        const resp = await supabase
           .from("reading_progress")
           .select("*, stories(*)")
           .eq("user_id", userId)
@@ -23,6 +23,7 @@ export function ContinueReading({ userId }: { userId: string }) {
           .lt("progress_percent", 95)
           .order("updated_at", { ascending: false })
           .limit(5);
+        const data = (resp as any).data ?? null;
 
         if (data && data.length > 0) {
           setStories(data.map((rp: any) => ({
@@ -36,7 +37,8 @@ export function ContinueReading({ userId }: { userId: string }) {
         // Supabase not configured, use localStorage
       }
 
-      // Fallback to localStorage
+      // Fallback to localStorage (only in browser)
+      if (typeof window === "undefined") return;
       const allKeys = Object.keys(localStorage);
       const progressKeys = allKeys.filter(key => key.startsWith(`last-page-`));
       
